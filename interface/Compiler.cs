@@ -70,7 +70,7 @@ namespace @interface
         //Справка
         private void showHelp()
         {
-            Help.ShowHelp(this, "http");//сделать справку
+            Help.ShowHelp(this, "https://github.com/XETR1K/interface");
         }
 
         //сохранение
