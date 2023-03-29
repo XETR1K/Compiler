@@ -27,14 +27,7 @@ namespace @interface
             this.KeyDown += new KeyEventHandler(hotkeyCreate);
             this.KeyDown += new KeyEventHandler(hotkeyOpen);
             this.KeyDown += new KeyEventHandler(hotkeyReference);
-            this.KeyDown += new KeyEventHandler(hotkeyLaunch);
 
-        }
-
-        private void Launch()
-        {
-            richTextBox2.Clear();
-            richTextBox2.Text = LexicalAnalyzer.RunScanner(richTextBox1.Text);
         }
 
         //хоткеи
@@ -71,13 +64,6 @@ namespace @interface
             if (e.Control && e.KeyCode == Keys.F1)//Ctrl+F1
             {
                 showHelp();
-            }
-        }
-        private void hotkeyLaunch(object sender, KeyEventArgs e)
-        {
-            if (e.Control && e.KeyCode == Keys.F9)//Ctrl+F9
-            {
-                Launch();
             }
         }
 
@@ -257,11 +243,6 @@ namespace @interface
         private void вызовСправкиToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showHelp();
-        }
-
-        private void пускToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            Launch();
         }
     }
 }
