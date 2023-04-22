@@ -69,8 +69,9 @@
             this.cutToolStripButton = new System.Windows.Forms.ToolStripButton();
             this.pasteToolStripButton = new System.Windows.Forms.ToolStripButton();
             this.splitContainer = new System.Windows.Forms.SplitContainer();
-            this.richTextBox1 = new System.Windows.Forms.RichTextBox();
-            this.richTextBox2 = new System.Windows.Forms.RichTextBox();
+            this.richTextBoxLineNumber = new System.Windows.Forms.RichTextBox();
+            this.richTextBoxInput = new System.Windows.Forms.RichTextBox();
+            this.richTextBoxOutput = new System.Windows.Forms.RichTextBox();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.menuStrip.SuspendLayout();
@@ -436,37 +437,56 @@
             // splitContainer.Panel1
             // 
             this.splitContainer.Panel1.AutoScroll = true;
-            this.splitContainer.Panel1.Controls.Add(this.richTextBox1);
+            this.splitContainer.Panel1.Controls.Add(this.richTextBoxLineNumber);
+            this.splitContainer.Panel1.Controls.Add(this.richTextBoxInput);
+            this.splitContainer.Panel1.Resize += new System.EventHandler(this.splitContainer_Panel1_Resize);
             // 
             // splitContainer.Panel2
             // 
             this.splitContainer.Panel2.AutoScroll = true;
-            this.splitContainer.Panel2.Controls.Add(this.richTextBox2);
+            this.splitContainer.Panel2.Controls.Add(this.richTextBoxOutput);
             this.splitContainer.Size = new System.Drawing.Size(1264, 663);
             this.splitContainer.SplitterDistance = 400;
             this.splitContainer.SplitterWidth = 5;
             this.splitContainer.TabIndex = 2;
             // 
-            // richTextBox1
+            // richTextBoxLineNumber
             // 
-            this.richTextBox1.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.richTextBox1.Location = new System.Drawing.Point(11, 14);
-            this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(1240, 372);
-            this.richTextBox1.TabIndex = 0;
-            this.richTextBox1.Text = "";
-            this.richTextBox1.WordWrap = false;
+            this.richTextBoxLineNumber.BackColor = System.Drawing.SystemColors.MenuBar;
+            this.richTextBoxLineNumber.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.richTextBoxLineNumber.Location = new System.Drawing.Point(11, 14);
+            this.richTextBoxLineNumber.Name = "richTextBoxLineNumber";
+            this.richTextBoxLineNumber.ReadOnly = true;
+            this.richTextBoxLineNumber.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.None;
+            this.richTextBoxLineNumber.Size = new System.Drawing.Size(35, 372);
+            this.richTextBoxLineNumber.TabIndex = 1;
+            this.richTextBoxLineNumber.Text = "";
             // 
-            // richTextBox2
+            // richTextBoxInput
             // 
-            this.richTextBox2.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.richTextBox2.Location = new System.Drawing.Point(11, 11);
-            this.richTextBox2.Name = "richTextBox2";
-            this.richTextBox2.ReadOnly = true;
-            this.richTextBox2.Size = new System.Drawing.Size(1240, 234);
-            this.richTextBox2.TabIndex = 1;
-            this.richTextBox2.Text = "";
-            this.richTextBox2.WordWrap = false;
+            this.richTextBoxInput.BackColor = System.Drawing.SystemColors.MenuBar;
+            this.richTextBoxInput.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.richTextBoxInput.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(6)))), ((int)(((byte)(81)))), ((int)(((byte)(255)))));
+            this.richTextBoxInput.Location = new System.Drawing.Point(47, 14);
+            this.richTextBoxInput.Name = "richTextBoxInput";
+            this.richTextBoxInput.Size = new System.Drawing.Size(1204, 372);
+            this.richTextBoxInput.TabIndex = 0;
+            this.richTextBoxInput.Text = "";
+            this.richTextBoxInput.WordWrap = false;
+            this.richTextBoxInput.VScroll += new System.EventHandler(this.richTextBox1_VScroll);
+            this.richTextBoxInput.TextChanged += new System.EventHandler(this.richTextBox1_TextChanged);
+            // 
+            // richTextBoxOutput
+            // 
+            this.richTextBoxOutput.BackColor = System.Drawing.SystemColors.MenuBar;
+            this.richTextBoxOutput.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.richTextBoxOutput.Location = new System.Drawing.Point(11, 11);
+            this.richTextBoxOutput.Name = "richTextBoxOutput";
+            this.richTextBoxOutput.ReadOnly = true;
+            this.richTextBoxOutput.Size = new System.Drawing.Size(1240, 234);
+            this.richTextBoxOutput.TabIndex = 1;
+            this.richTextBoxOutput.Text = "";
+            this.richTextBoxOutput.WordWrap = false;
             // 
             // openFileDialog1
             // 
@@ -476,7 +496,6 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.AutoScroll = true;
             this.AutoSize = true;
             this.BackColor = System.Drawing.SystemColors.AppWorkspace;
             this.ClientSize = new System.Drawing.Size(1264, 724);
@@ -547,10 +566,11 @@
         private System.Windows.Forms.ToolStripMenuItem вызовСправкиToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem оПрограммеToolStripMenuItem;
         private System.Windows.Forms.SplitContainer splitContainer;
-        private System.Windows.Forms.RichTextBox richTextBox1;
+        private System.Windows.Forms.RichTextBox richTextBoxInput;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
-        private System.Windows.Forms.RichTextBox richTextBox2;
+        private System.Windows.Forms.RichTextBox richTextBoxOutput;
+        private System.Windows.Forms.RichTextBox richTextBoxLineNumber;
     }
 }
 
