@@ -375,5 +375,58 @@ namespace @interface
         {
 
         }
+
+        private void лаб3ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Help.ShowHelp(this, "https://github.com/XETR1K/interface");
+        }
+
+        private void постановкаЗадачиToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = Environment.CurrentDirectory + "\\html-documents\\Постановка задачи.html";
+            System.Diagnostics.Process.Start(path);
+        }
+
+        private void грамматикаToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = Environment.CurrentDirectory + "\\html-documents\\Разработка грамматики.html";
+            System.Diagnostics.Process.Start(path);
+        }
+
+        private void классификацияГрамматикиToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = Environment.CurrentDirectory + "\\html-documents\\Классификация грамматики.html";
+            System.Diagnostics.Process.Start(path);
+        }
+
+        private void методАнализаToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = Environment.CurrentDirectory + "\\html-documents\\Метод анализа.html";
+            System.Diagnostics.Process.Start(path);
+        }
+
+        private void диагностикаИНейтрализацияОшибкиToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = Environment.CurrentDirectory + "\\html-documents\\Диагностика и нейтрализация синтаксических ошибок.html";
+            System.Diagnostics.Process.Start(path);
+        }
+
+        private void тестовыйПримерToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = Environment.CurrentDirectory + "\\html-documents\\Тестовый пример.html";
+            System.Diagnostics.Process.Start(path);
+        }
+
+        private void списокЛитературыToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = Environment.CurrentDirectory + "\\html-documents\\Список литературы.html";
+            System.Diagnostics.Process.Start(path);
+        }
+
+        private void исходныйКодПрограммыToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = Environment.CurrentDirectory + "\\html-documents\\Исходный код программы.html";
+            System.Diagnostics.Process.Start(path);
+        }
     }
 }
