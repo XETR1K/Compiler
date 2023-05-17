@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Разработка грамматики</title>
+</head>
+<body>
+	<h1>Разработка грамматики</h1>
+	<p>Определим грамматику логических выражений языка C++ G[‹Expr›] в нотации Хомского с продукциями P:</p>
+	<ol>
+		<li>‹Expr› → ‹AndExpr› {||‹AndExpr›}</li>
+		<li>‹AndExpr› → ‹NotExpr› {&&‹NotExpr›}</li>
+		<li>‹NotExpr› → !‹SimpleExpr› | ‹SimpleExpr›</li>
+		<li>‹SimpleExpr› → ‹Identifier› | ‹BooleanLiteral› | (‹Expr›) | ‹ComparisonExpr›</li>
+		<li>‹ComparisonExpr› → ‹ArithmeticExpr› ‹RelationalOp› ‹ArithmeticExpr›</li>
+		<li>‹ArithmeticExpr› → ‹Term› {‹AdditiveOp›‹Term›}</li>
+		<li>‹Term› → ‹Factor› {‹MultiplicativeOp›‹Factor›}</li>
+		<li>‹Factor› → (‹ArithmeticExpr›) | ‹Identifier› | ‹IntegerLiteral› | ‹FloatingPointLiteral›</li>
+		<li>‹RelationalOp› → &lt; | &gt; | &lt;= | &gt;= | == | !=</li>
+		<li>‹AdditiveOp› → + | -</li>
+		<li>‹MultiplicativeOp› → * | /</li>
+	</ol>
+	<p>Следуя введенному формальному определению грамматики, представим G[‹Expr›] ее составляющими:</p>
+	<ul>
+		<li>Z = ‹Expr›;</li>
+		<li>VT = {&lt;, &gt;, ==, !=, +, -, *, /, !, &amp;&amp;, ||, (, ), true, false, 0, 1, 2, ..., 9, a, b, c, ..., z, A, B, C, ..., Z};</li>
+		<li>VN = {‹Expr›, ‹AndExpr›, ‹NotExpr›, ‹SimpleExpr›, ‹ComparisonExpr›, ‹ArithmeticExpr›, ‹Term›, ‹Factor›, ‹RelationalOp›, ‹AdditiveOp›, ‹MultiplicativeOp›}.</li>
+	</ul>
+	<p><a href="Постановка задачи.html">Предыдущий документ</a> | <a href="Классификация грамматики.html">Следующий документ</a></p>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Классификация грамматики</title>
+</head>
+<body>
+	<h1>Классификация грамматики</h1>
+	<p>Согласно классификации Хомского, грамматика G[‹Expr›] языка C++ является контекстно-свободной.</p>
+	<h2>Правила грамматики:</h2>
+	<ol>
+		<li>‹Expr› → ‹AndExpr› {||‹AndExpr›}</li>
+		<li>‹AndExpr› → ‹NotExpr› {&&‹NotExpr›}</li>
+		<li>‹NotExpr› → !‹SimpleExpr› | ‹SimpleExpr›</li>
+		<li>‹SimpleExpr› → ‹Identifier› | ‹BooleanLiteral› | (‹Expr›) | ‹ComparisonExpr›</li>
+		<li>‹ComparisonExpr› → ‹ArithmeticExpr› ‹RelationalOp› ‹ArithmeticExpr›</li>
+		<li>‹ArithmeticExpr› → ‹Term› {‹AdditiveOp›‹Term›}</li>
+		<li>‹Term› → ‹Factor› {‹MultiplicativeOp›‹Factor›}</li>
+		<li>‹Factor› → (‹ArithmeticExpr›) | ‹Identifier› | ‹IntegerLiteral› | ‹FloatingPointLiteral›</li>
+		<li>‹RelationalOp› → &lt; | &gt; | &lt;= | &gt;= | == | !=</li>
+		<li>‹AdditiveOp› → + | -</li>
+		<li>‹MultiplicativeOp› → * | /</li>
+	</ol>
+	<p>В данной грамматике все продукции являются контекстно-свободными, так как каждая продукция состоит из одного нетерминала, за исключением терминальных символов и символов пунктуации. Нет ни левой, ни правой рекурсии, так что грамматика удовлетворяет правилам класса контекстно-свободных грамматик.</p>
+	<p><a href="Разработка грамматики.html">Предыдущий документ</a> | <a href="Метод анализа.html">Следующий документ</a></p>
+</body>
+</html>

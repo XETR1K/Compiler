@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Authentication.ExtendedProtection;
 
 // Перечисление для описания типов лексем
 public enum TokenType
@@ -215,19 +214,6 @@ public static class LexicalAnalyzer
             }
         }
         return tokens;
-    }
-    //Метод для запуска сканера
-    public static string RunScanner(string input)
-    {
-        var tokens = LexicalAnalyzer.Tokenize(input);
-        string result = "";
-        foreach (var token in tokens)
-        {
-            //Если токен является некорректным символом то выводим его
-            if (token.Item1 == TokenType.Invalid)
-                result += $"{token.Item1,-20} {token.Item2,-20} с {token.Item3} до {token.Item4}\n";
-        }
-        return result;
     }
 }
 
