@@ -1,144 +1,232 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace @interface
 {
-    class Parser
+    static class Parser
     {
-        private string input;
-        private int pos;
+        //Список лексем
+        private static List<Tuple<TokenType, string, int, int>> tokens;
+        //Позиция текущей лексемы
+        private static int currentTokenIndex;
+        private static bool isBoolIndetifier;
 
-        public Parser(string input)
+        //Ошибки
+        private static List<string> errors;
+        public static List<string> getErrors() { return errors; }
+        public static void clearErrorsList() { errors.Clear(); }
+/*        public static void errorAdd(Exception e) //Добавление ошибок
         {
-            this.input = input;
-            this.pos = 0;
-        }
+            if (errors.Contains(e.Message))
+                return;
+            else
+                errors.Add(e.Message);
+        }*/
 
-        public bool Parse()
+        //метод для обработки ошибок
+        private static void Error(string message)
         {
-            return ParseExpr();
-        }
-
-        private bool ParseExpr()
-        {
-            return ParseOrExpr() || ParseAndExpr();
-        }
-
-        private bool ParseOrExpr()
-        {
-            // P[‹OrExpr›]: ‹AndExpr› {||‹AndExpr›}
-            int startPos = pos;
-
-            if (ParseAndExpr())
+            if (currentTokenIndex >= tokens.Count) 
             {
-                while (pos < input.Length - 1 && input[pos] == '|' && input[pos + 1] == '|')
-                {
-                    pos += 2;
-
-                    if (!ParseAndExpr())
-                    {
-                        pos = startPos;
-                        return false;
-                    }
-                }
-                return true;
+                errors.Add($"Ошибка в позиции {tokens[tokens.Count - 1].Item4 + 1}: {message}");
+                throw new Exception($"Ошибка в позиции {tokens[tokens.Count - 1].Item4 + 1}: {message}");
             }
-            return false;
-        }
-
-        private bool ParseAndExpr()
-        {
-            // P[‹AndExpr›]: ‹NotExpr› {&&‹NotExpr›}
-            int startPos = pos;
-
-            if (ParseNotExpr())
+            else
             {
-                while (pos < input.Length - 1 && input[pos] == '&' && input[pos + 1] == '&')
-                {
-                    pos += 2;
-
-                    if (!ParseNotExpr())
-                    {
-                        pos = startPos;
-                        return false;
-                    }
-                }
-                return true;
+                errors.Add($"Ошибка в позиции {tokens[currentTokenIndex].Item3}: {message}");
+                throw new Exception($"Ошибка в позиции {tokens[currentTokenIndex].Item3}: {message}");
             }
-            return false;
+            
         }
 
-        private bool ParseNotExpr()
+        //метод для проверки текущей лексемы и перехода к следующей
+        private static void Match(TokenType expectedToken)
         {
-            // P[‹NotExpr›]: !‹SimpleExpr› | ‹SimpleExpr›
-            int startPos = pos;
-
-            if (pos < input.Length && input[pos] == '!')
+            if (currentTokenIndex < tokens.Count)
             {
-                pos++;
+                if (tokens[currentTokenIndex].Item1 == expectedToken)
+                    currentTokenIndex++;
+                else
+                    Error($"Ожидалась лексема {expectedToken}, получена {tokens[currentTokenIndex].Item1}");
+            }
+        }
 
-                if (ParseSimpleExpr())
-                {
-                    return true;
-                }
-
-                pos = startPos;
+        //метод для проверки текущей лексемы без перехода к следующей
+        private static bool Check(TokenType expectedToken)
+        {
+            if (currentTokenIndex == tokens.Count)
                 return false;
+            return tokens[currentTokenIndex].Item1 == expectedToken;
+        }
+
+        //метод анализа строки
+        public static void Parse(List<Tuple<TokenType, string, int, int>> inputTokens)
+        {
+            tokens = inputTokens;
+            currentTokenIndex = 0;
+            errors = new List<string>();
+
+            try
+            {
+                Expr();
+                if (currentTokenIndex != tokens.Count - 1)
+                    Error("Некорректное выражение");
             }
-
-            return ParseSimpleExpr();
+            catch
+            {
+                return;
+            }
         }
 
-        private bool ParseSimpleExpr()
+        //‹Expr› → ‹AndExpr› {||‹AndExpr›}
+        private static void Expr()
         {
-            // P[‹SimpleExpr›]: ‹Identifier› | ‹BooleanLiteral› | (‹Expr›) | ‹ComparisonExpr›
-            return true;
+            AndExpr();
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.LogicalOp) && tokens[currentTokenIndex].Item2 == "||")
+            {
+                Match(TokenType.LogicalOp);
+                AndExpr();
+            }
         }
 
-        private bool ParseComparisonExpr()
+        //‹AndExpr› → ‹NotExpr› {&&‹NotExpr›}
+        private static void AndExpr()
         {
-            // P[‹ComparisonExpr›]: ‹ArithmeticExpr› ‹RelationalOp› ‹ArithmeticExpr›
-            return true;
+            NotExpr();
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.LogicalOp) && tokens[currentTokenIndex].Item2 == "&&")
+            {
+                Match(TokenType.LogicalOp);
+                NotExpr();
+            }
         }
 
-        private bool ParseArithmeticExpr()
+        //‹NotExpr› → !‹SimpleExpr› | ‹SimpleExpr›
+        private static void NotExpr()
         {
-            // P[‹ArithmeticExpr›]: ‹Term› {‹AdditiveOp›‹Term›}
-            return true;
+            if (Check(TokenType.Not))
+            {
+                isBoolIndetifier = true;
+                Match(TokenType.Not);
+            }
+            SimpleExpr();
+        }
+        //метод для определения, нужно ли переходить к ComparisonExpr
+        private static bool isComparisonExpr()
+        {
+            if (!isBoolIndetifier && currentTokenIndex < tokens.Count && (Check(TokenType.RelationalOp) || Check(TokenType.AdditiveOp) || Check(TokenType.MultiplicativeOp)))
+            {
+                currentTokenIndex--;
+                ComparisonExpr();
+                return true;
+            }
+            return false;
+        }
+        //‹SimpleExpr› → ‹Identifier› | ‹BooleanLiteral› | (‹Expr›) | ‹ComparisonExpr›
+        private static void SimpleExpr()
+        {
+            if (currentTokenIndex < tokens.Count)
+            {
+                switch (tokens[currentTokenIndex].Item1)
+                {
+                    case TokenType.Identifier:
+                        Match(TokenType.Identifier);
+                        isComparisonExpr();
+                        isBoolIndetifier = false;
+                        break;
+                    case TokenType.IntegerLiteral:
+                        Match(TokenType.IntegerLiteral);
+                        if (!isComparisonExpr())
+                            Error("Ожидался идентификатор, логическая константа, число или открывающая скобка");
+                        break;
+                    case TokenType.FloatingPointLiteral:
+                        Match(TokenType.FloatingPointLiteral);
+                        if(!isComparisonExpr())
+                            Error("Ожидался идентификатор, логическая константа, число или открывающая скобка");
+                        break;
+                    case TokenType.BooleanLiteral:
+                        Match(TokenType.BooleanLiteral);
+                        break;
+                    case TokenType.LeftParen:
+                        Match(TokenType.LeftParen);
+                        isBoolIndetifier = false;
+                        Expr();
+                        if (currentTokenIndex < tokens.Count)
+                        {
+                            if (Check(TokenType.RightParen))
+                                Match(TokenType.RightParen);
+                            else
+                                Error("Отсутсвует закрывающая скобка.");
+                        }
+                        else
+                            Error("Отсутсвует закрывающая скобка.");
+                        break;
+                    default:
+                        Error("Ожидался идентификатор, логическая константа, число или открывающая скобка");
+                        break;
+                }
+            }
+            else
+                Error("Некорректное выражение");
         }
 
-        private bool ParseTerm()
+        //‹ComparisonExpr› → ‹ArithmeticExpr› ‹RelationalOp› ‹ArithmeticExpr›
+        private static void ComparisonExpr()
         {
-            // P[‹Term›]: ‹Factor› {‹MultiplicativeOp›‹Factor›}
-            return true;
+            ArithmeticExpr();
+            Match(TokenType.RelationalOp);
+            ArithmeticExpr();
         }
 
-        private bool ParseFactor()
+        //‹ArithmeticExpr› → ‹Term› {‹AdditiveOp›‹Term›}
+        private static void ArithmeticExpr()
         {
-            // P[‹Factor›]: (‹ArithmeticExpr›) | ‹Identifier› | ‹IntegerLiteral› | ‹FloatingPointLiteral›
-            return true;
+            Term();
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.AdditiveOp))
+            {
+                Match(TokenType.AdditiveOp);
+                Term();
+            }
         }
 
-        private bool ParseRelationalOp()
+        //‹Term› → ‹Factor› {‹MultiplicativeOp›‹Factor›}
+        private static void Term()
         {
-            // P[‹RelationalOp›]: < | > | <= | >= | == | !=
-            return true;
+            Factor();
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.MultiplicativeOp))
+            {
+                Match(TokenType.MultiplicativeOp);
+                Factor();
+            }
         }
 
-        private bool ParseAdditiveOp()
+        //‹Factor› → (‹ArithmeticExpr›) | ‹Identifier› | ‹IntegerLiteral› | ‹FloatingPointLiteral›
+        private static void Factor()
         {
-            // P[‹AdditiveOp›]: + | -
-            return true;
-        }
-
-        private bool ParseMultiplicativeOp()
-        {
-            // P[‹MultiplicativeOp›]: * | / | %
-            return true;
+            if (currentTokenIndex < tokens.Count)
+            {
+                switch (tokens[currentTokenIndex].Item1)
+                {
+                    case TokenType.LeftParen:
+                        Match(TokenType.LeftParen);
+                        ArithmeticExpr();
+                        Match(TokenType.RightParen);
+                        break;
+                    case TokenType.IntegerLiteral:
+                        Match(TokenType.IntegerLiteral);
+                        break;
+                    case TokenType.FloatingPointLiteral:
+                        Match(TokenType.FloatingPointLiteral);
+                        break;
+                    case TokenType.Identifier:
+                        Match(TokenType.Identifier);
+                        break;
+                    default:
+                        Error("Ожидался идентификатор, число или открывающая скобка");
+                        break;
+                }
+            }
+            else
+                Error("Некорректное выражение");
         }
     }
-
 }

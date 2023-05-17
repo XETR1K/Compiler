@@ -38,7 +38,23 @@ namespace @interface
         private void Launch()
         {
             richTextBoxOutput.Clear();
-            richTextBoxOutput.Text = LexicalAnalyzer.RunScanner(richTextBoxInput.Text);
+            if (richTextBoxInput.Text != string.Empty)
+            {
+                Parser.Parse(LexicalAnalyzer.Tokenize(richTextBoxInput.Text));
+                if (Parser.getErrors().Count == 0)
+                {
+                    richTextBoxOutput.Text = "Ошибок нет!";
+                }
+                else
+                {
+                    foreach (var error in Parser.getErrors()) 
+                    {
+                        richTextBoxOutput.Text += error + "\n";
+                    }
+                    Parser.clearErrorsList();
+                    
+                }
+            }
         }
 
         //хоткеи
@@ -286,99 +302,14 @@ namespace @interface
             }
         }
 
-        //Подсветка синтаксиса
-        private void HighlightSyntax(RichTextBox richTextBox)
-        {
-            // Определение цветов
-            Color keywordColor = Color.Purple;
-            Color stringColor = Color.Red;
-            Color commentColor = Color.Green;
-            Color typeOfDataColor = Color.DarkBlue;
-
-            // Определение регулярных выражений для ключевых слов, строк и комментариев
-            string keywordPattern = @"\b(if|else|for|while|switch)\b";
-            string typeOfDataPattern = @"\b(int|float|long|short|double|string|char|bool|true|false)\b";
-            string stringPattern = @"""(\\.|[^""\\])*""";
-            string commentPattern = @"//.*?$|/\*.*?\*/";
-
-            // Создание объекта регулярного выражения
-            Regex keywordRegex = new Regex(keywordPattern);
-            Regex typeOfDataRegex = new Regex(typeOfDataPattern);
-            Regex stringRegex = new Regex(stringPattern);
-            Regex commentRegex = new Regex(commentPattern, RegexOptions.Multiline);
-
-            // Сохранение текущей позиции курсора
-            int originalSelectionStart = richTextBox.SelectionStart;
-            int originalSelectionLength = richTextBox.SelectionLength;
-
-            // Сохранение текущего цвета выделенного текста
-            Color selectionColor = richTextBox.ForeColor;
-
-            // Отключение перерисовки RichTextBox
-            richTextBox.SuspendLayout();
-
-            // Итерация по всем строкам текста
-            for (int i = 0; i < richTextBox.Lines.Length; i++)
-            {
-                string line = richTextBox.Lines[i];
-
-                // Поиск ключевых слов
-                foreach (Match keywordMatch in keywordRegex.Matches(line))
-                {
-                    richTextBox.Select(keywordMatch.Index + richTextBox.GetFirstCharIndexFromLine(i), keywordMatch.Length);
-                    richTextBox.SelectionColor = keywordColor;
-                }
-
-                foreach (Match typeOfDataMatch in typeOfDataRegex.Matches(line))
-                {
-                    richTextBox.Select(typeOfDataMatch.Index + richTextBox.GetFirstCharIndexFromLine(i), typeOfDataMatch.Length);
-                    richTextBox.SelectionColor = typeOfDataColor;
-                }
-
-                // Поиск строк
-                foreach (Match stringMatch in stringRegex.Matches(line))
-                {
-                    richTextBox.Select(stringMatch.Index + richTextBox.GetFirstCharIndexFromLine(i), stringMatch.Length);
-                    richTextBox.SelectionColor = stringColor;
-                }
-
-                // Поиск комментариев
-                foreach (Match commentMatch in commentRegex.Matches(line))
-                {
-                    richTextBox.Select(commentMatch.Index + richTextBox.GetFirstCharIndexFromLine(i), commentMatch.Length);
-                    richTextBox.SelectionColor = commentColor;
-                }
-            }
-
-            // Восстановление выделения текста и позиции курсора
-            richTextBox.Select(originalSelectionStart, originalSelectionLength);
-
-            // Восстановление цвета выделенного текста
-            richTextBox.SelectionColor = selectionColor;
-
-            // Включение перерисовки RichTextBox
-            richTextBox.ResumeLayout();
-        }
-
         private void richTextBox1_TextChanged(object sender, EventArgs e)
         {
             UpdateLineNumbers();
-            HighlightSyntax(richTextBoxInput);
         }
 
         private void richTextBox1_VScroll(object sender, EventArgs e)
         {
             UpdateLineNumbers();
-        }
-
-        private void splitContainer_Panel1_Resize(object sender, EventArgs e)
-        {
-
-        }
-
-        private void лаб3ToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            Help.ShowHelp(this, "https://github.com/XETR1K/interface");
         }
 
         private void постановкаЗадачиToolStripMenuItem_Click(object sender, EventArgs e)

@@ -447,7 +447,6 @@
             this.splitContainer.Panel1.AutoScroll = true;
             this.splitContainer.Panel1.Controls.Add(this.richTextBoxLineNumber);
             this.splitContainer.Panel1.Controls.Add(this.richTextBoxInput);
-            this.splitContainer.Panel1.Resize += new System.EventHandler(this.splitContainer_Panel1_Resize);
             // 
             // splitContainer.Panel2
             // 

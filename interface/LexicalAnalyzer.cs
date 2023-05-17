@@ -1,49 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Authentication.ExtendedProtection;
+
+// Перечисление для описания типов лексем
+public enum TokenType
+{
+    Identifier, //идентификатор
+    IntegerLiteral, //целое число
+    FloatingPointLiteral, //число с плавающей точкой
+    BooleanLiteral, //true и false
+    RelationalOp, //операторы сравнения
+    AdditiveOp, MultiplicativeOp,//арифметические операторы
+    LogicalOp, //логические операторы
+    Not, //оператор отрицания
+    LeftParen, RightParen, //скобки
+    Invalid //некорректный символ
+}
 
 public static class LexicalAnalyzer
 {
-    // Перечисление для описания типов лексем
-    enum TokenType
-    {
-        Identifier, //идентификатор
-        IntegerLiteral, //целое число
-        FloatingPointLiteral, //число с плавающей точкой
-        BooleanLiteral, //true и false
-        RelationalOp, //Операторы сравнения
-        AdditiveOp, MultiplicativeOp,//арифметические операторы
-        LogicalOp, //логические операторы
-        Not, //оператор отрицания
-        LeftParen, RightParen, //скобки
-        Invalid
-    }
-
     // Словарь для хранения лексем
     private static readonly Dictionary<string, TokenType> keywords = new Dictionary<string, TokenType>()
     {
         // Ключевые слова
         { "true", TokenType.BooleanLiteral },
         { "false", TokenType.BooleanLiteral },
-
-        // Операторы
-        { "!", TokenType.Not },
-        { "&&", TokenType.LogicalOp },
-        { "||", TokenType.LogicalOp },
-        { "<", TokenType.RelationalOp },
-        { ">", TokenType.RelationalOp },
-        { "<=", TokenType.RelationalOp },
-        { ">=", TokenType.RelationalOp },
-        { "==", TokenType.RelationalOp },
-        { "!=", TokenType.RelationalOp },
-        { "+", TokenType.AdditiveOp },
-        { "-", TokenType.AdditiveOp },
-        { "*", TokenType.MultiplicativeOp },
-        { "/", TokenType.MultiplicativeOp },
-        { "%", TokenType.MultiplicativeOp },
-
-        // Скобки
-        { "(", TokenType.LeftParen },
-        { ")", TokenType.RightParen },
     };
 
     // Метод для проверки, является ли символ буквой
@@ -59,7 +40,7 @@ public static class LexicalAnalyzer
     }
 
     // Метод для выделения лексем
-    private static List<Tuple<TokenType, string, int, int>> Tokenize(string input)
+    public static List<Tuple<TokenType, string, int, int>> Tokenize(string input)
     {
         var tokens = new List<Tuple<TokenType, string, int, int>>();
 
@@ -86,9 +67,9 @@ public static class LexicalAnalyzer
                 }
                 string identifier = input.Substring(start, position - start);
                 if (keywords.ContainsKey(identifier))
-                    tokens.Add(new Tuple<TokenType, string, int, int>(keywords[identifier], identifier, start, position - 1));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(keywords[identifier], identifier, start + 1, position));
                 else
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Identifier, identifier, start, position - 1));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Identifier, identifier, start + 1, position));
                 continue;
             }
 
@@ -111,11 +92,11 @@ public static class LexicalAnalyzer
 
                 if (hasDecimalPoint)
                 {
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.FloatingPointLiteral, number, start, position - 1));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.FloatingPointLiteral, number, start + 1, position));
                 }
                 else
                 {
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.IntegerLiteral, number, start, position - 1));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.IntegerLiteral, number, start + 1, position));
                 }
 
                 continue;
@@ -125,121 +106,110 @@ public static class LexicalAnalyzer
             switch (currentChar)
             {
                 case '!':
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Not, "!", position, position));
-                    position++;
-                    break;
-                case '&':
-                    if (position < input.Length - 1 && input[position + 1] == '&')
-                    {
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LogicalOp, "&&", position, position + 1));
-                        position += 2;
-                    }
-                    else
-                    {
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, currentChar.ToString(), position, position));
-                        position++;
-                    }
-                    break;
-                case '|':
-                    if (position < input.Length - 1 && input[position + 1] == '|')
-                    {
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LogicalOp, "||", position, position + 1));
-                        position += 2;
-                    }
-                    else
-                    {
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, currentChar.ToString(), position, position));
-                        position++;
-                    }
-                    break;
-                case '<':
                     if (position < input.Length - 1 && input[position + 1] == '=')
                     {
-                        // Оператор <=
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "<=", position, position + 1));
+                        // Оператор !=
+                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "!=", position + 1, position + 2));
                         position += 2;
                     }
                     else
-                    {
-                        // Оператор <
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "<", position, position));
+                    {   // Оператор !
+                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Not, "!", position + 1, position + 1));
                         position++;
                     }
                     break;
 
-                case '>':
-                    if (position < input.Length - 1 && input[position + 1] == '=')
+                case '&':
+                    if (position < input.Length - 1 && input[position + 1] == '&')
                     {
-                        // Оператор >=
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, ">=", position, position + 1));
+                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LogicalOp, "&&", position + 1, position + 2));
                         position += 2;
                     }
                     else
                     {
-                        // Оператор >
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, ">", position, position));
+                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, currentChar.ToString(), position + 1, position + 1));
                         position++;
                     }
                     break;
+
+                case '|':
+                    if (position < input.Length - 1 && input[position + 1] == '|')
+                    {
+                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LogicalOp, "||", position + 1, position + 2));
+                        position += 2;
+                    }
+                    else
+                    {
+                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, currentChar.ToString(), position + 1, position + 1));
+                        position++;
+                    }
+                    break;
+
+                case '<':
+                    // Оператор <
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "<", position + 1, position + 1));
+                    position++;
+                    break;
+
+                case '>':
+                    // Оператор >
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, ">", position + 1, position + 1));
+                    position++;
+                    break;
+
                 case '=':
                     if (position < input.Length - 1 && input[position + 1] == '=')
                     {
                         // Оператор ==
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "==", position, position + 1));
+                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "==", position + 1, position + 2));
                         position += 2;
                     }
                     else
                     {   //Некорректный символ
-                        tokens.Add(Tuple.Create(TokenType.Invalid, "=", position, position));
+                        tokens.Add(Tuple.Create(TokenType.Invalid, "=", position + 1, position + 1));
                         position++;
                     }
                     break;
 
                 case '+':
                     // Оператор +
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.AdditiveOp, "+", position, position));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.AdditiveOp, "+", position + 1, position + 1));
                     position++;
                     break;
 
                 case '-':
                     // Оператор -
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.AdditiveOp, "-", position, position));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.AdditiveOp, "-", position + 1, position + 1));
                     position++;
                     break;
 
                 case '*':
                     // Оператор *
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.MultiplicativeOp, "*", position, position));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.MultiplicativeOp, "*", position + 1, position + 1));
                     position++;
                     break;
 
                 case '/':
                     // Оператор /
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.MultiplicativeOp, "/", position, position));
-                    position++;
-                    break;
-
-                case '%':
-                    // Оператор %
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.MultiplicativeOp, "%", position, position));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.MultiplicativeOp, "/", position + 1, position + 1));
                     position++;
                     break;
 
                 case '(':
                     // Открывающая скобка
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LeftParen, "(", position, position));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LeftParen, "(", position + 1, position + 1));
                     position++;
                     break;
 
                 case ')':
                     // Закрывающая скобка
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RightParen, ")", position, position));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RightParen, ")", position + 1, position + 1));
                     position++;
                     break;
 
                 default:
                     // Некорректный символ
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, input[position].ToString(), position, position));
+                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, input[position].ToString(), position + 1, position + 1));
                     position++;
                     break;
             }
@@ -253,7 +223,9 @@ public static class LexicalAnalyzer
         string result = "";
         foreach (var token in tokens)
         {
-            result += $"{token.Item1,-20} {token.Item2,-20} с {token.Item3} до {token.Item4}\n";
+            //Если токен является некорректным символом то выводим его
+            if (token.Item1 == TokenType.Invalid)
+                result += $"{token.Item1,-20} {token.Item2,-20} с {token.Item3} до {token.Item4}\n";
         }
         return result;
     }
