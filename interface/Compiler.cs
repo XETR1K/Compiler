@@ -38,12 +38,13 @@ namespace @interface
 
         }
 
+
         private void Launch()
         {
             richTextBoxOutput.Clear();
             if (richTextBoxInput.Text != string.Empty)
             {
-                Parser.Parse(LexicalAnalyzer.Tokenize(richTextBoxInput.Text));
+                Parser.Parsing(LexicalAnalyzer.Tokenize(richTextBoxInput.Text));
                 if (Parser.getErrors().Count == 0)
                 {
                     richTextBoxOutput.Text = "Ошибок нет!";
@@ -52,7 +53,7 @@ namespace @interface
                 {
                     foreach (var error in Parser.getErrors()) 
                     {
-                        richTextBoxOutput.Text += error + "\n";
+                        richTextBoxOutput.Text += $"Ошибка в позиции {error.Position}: " + error.Message + "\n";
                     }
                     Parser.clearErrorsList();
                     
@@ -117,6 +118,7 @@ namespace @interface
                 File.WriteAllText(saveFileDialog1.FileName, richTextBoxInput.Text);
             else
                 saveAs();
+            richTextBoxOutput.Clear();
         }
 
         private void saveAs()
@@ -135,6 +137,7 @@ namespace @interface
             {
                 richTextBoxInput.Modified = true;
             }
+            richTextBoxOutput.Clear();
 
         }
 
@@ -166,6 +169,7 @@ namespace @interface
                 richTextBoxInput.Focus();
             }
             richTextBoxInput.Modified = false;
+            richTextBoxOutput.Clear();
         }
 
         //открытие
@@ -178,6 +182,7 @@ namespace @interface
                 saveFileDialog1.FileName = openFileDialog1.FileName;
                 richTextBoxInput.Modified = false;
             }
+            richTextBoxOutput.Clear();
         }
 
         private void создатьToolStripMenuItem_Click(object sender, EventArgs e)
@@ -209,11 +214,13 @@ namespace @interface
         private void отменитьToolStripMenuItem_Click(object sender, EventArgs e)
         {
             richTextBoxInput.Undo();
+            richTextBoxLineNumber.Undo();
         }
 
         private void вернутьToolStripMenuItem_Click(object sender, EventArgs e)
         {
             richTextBoxInput.Redo();
+            richTextBoxLineNumber.Undo();
         }
 
         private void вырезатьToolStripMenuItem_Click(object sender, EventArgs e)
@@ -259,11 +266,13 @@ namespace @interface
         private void cancelToolStripButton_Click(object sender, EventArgs e)
         {
             richTextBoxInput.Undo();
+            richTextBoxLineNumber.Undo();
         }
 
         private void returnToolStripButton_Click(object sender, EventArgs e)
         {
             richTextBoxInput.Redo();
+            richTextBoxLineNumber.Undo();
         }
 
         private void copyToolStripButton_Click(object sender, EventArgs e)
@@ -402,6 +411,26 @@ namespace @interface
         private void оПрограммеToolStripMenuItem_Click(object sender, EventArgs e)
         {
             openDocument("\\html-documents\\О программе.html");
+        }
+
+        private void MagnifierButton_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                if (richTextBoxInput.Font.Size > maxFontSize)
+                    return;
+                richTextBoxInput.Font = new Font(richTextBoxInput.Font.FontFamily, richTextBoxInput.Font.Size + 2);
+                richTextBoxLineNumber.Font = new Font(richTextBoxLineNumber.Font.FontFamily, richTextBoxLineNumber.Font.Size + 2);
+                richTextBoxOutput.Font = new Font(richTextBoxOutput.Font.FontFamily, richTextBoxOutput.Font.Size + 2);
+            }
+            else if (e.Button == MouseButtons.Right)
+            {
+                if (richTextBoxInput.Font.Size < minFontSize)
+                    return;
+                richTextBoxInput.Font = new Font(richTextBoxInput.Font.FontFamily, richTextBoxInput.Font.Size - 2);
+                richTextBoxLineNumber.Font = new Font(richTextBoxLineNumber.Font.FontFamily, richTextBoxLineNumber.Font.Size - 2);
+                richTextBoxOutput.Font = new Font(richTextBoxOutput.Font.FontFamily, richTextBoxOutput.Font.Size - 2);
+            }
         }
     }
 }

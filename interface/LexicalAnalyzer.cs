@@ -4,16 +4,33 @@ using System.Collections.Generic;
 // Перечисление для описания типов лексем
 public enum TokenType
 {
-    Identifier, //идентификатор
-    IntegerLiteral, //целое число
-    FloatingPointLiteral, //число с плавающей точкой
-    BooleanLiteral, //true и false
-    RelationalOp, //операторы сравнения
-    AdditiveOp, MultiplicativeOp,//арифметические операторы
-    LogicalOp, //логические операторы
-    Not, //оператор отрицания
-    LeftParen, RightParen, //скобки
-    Invalid //некорректный символ
+    идентификатор, //идентификатор
+    целое_число, //целое число
+    число_с_плавающей_точкой, //число с плавающей точкой
+    логическая_константа, //true и false
+    оператор_сравнения, //операторы сравнения
+    оператор_сложения_вычитания, оператор_умножения_деления,//арифметические операторы
+    логический_оператор, //логические операторы
+    оператор_отрицания, //оператор отрицания
+    открывающая_скобка, закрывающая_скобка, //скобки
+    некорректный_токен //некорректный токен
+}
+
+//Класс токен
+public class Token
+{
+    public TokenType tokenType { get; set; }
+    public string token { get; set; }
+    public int start { get; set; }
+    public int end { get; set; }
+
+    public Token(TokenType _tokenType, string _token, int _start, int _end)
+    {
+        tokenType = _tokenType;
+        token = _token;
+        start = _start;
+        end = _end;
+    }
 }
 
 public static class LexicalAnalyzer
@@ -22,8 +39,8 @@ public static class LexicalAnalyzer
     private static readonly Dictionary<string, TokenType> keywords = new Dictionary<string, TokenType>()
     {
         // Ключевые слова
-        { "true", TokenType.BooleanLiteral },
-        { "false", TokenType.BooleanLiteral },
+        { "true", TokenType.логическая_константа },
+        { "false", TokenType.логическая_константа },
     };
 
     // Метод для проверки, является ли символ буквой
@@ -39,9 +56,9 @@ public static class LexicalAnalyzer
     }
 
     // Метод для выделения лексем
-    public static List<Tuple<TokenType, string, int, int>> Tokenize(string input)
+    public static List<Token> Tokenize(string input)
     {
-        var tokens = new List<Tuple<TokenType, string, int, int>>();
+        var tokens = new List<Token>();
 
         int position = 0;
 
@@ -66,9 +83,9 @@ public static class LexicalAnalyzer
                 }
                 string identifier = input.Substring(start, position - start);
                 if (keywords.ContainsKey(identifier))
-                    tokens.Add(new Tuple<TokenType, string, int, int>(keywords[identifier], identifier, start + 1, position));
+                    tokens.Add(new Token(keywords[identifier], identifier, start + 1, position));
                 else
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Identifier, identifier, start + 1, position));
+                    tokens.Add(new Token(TokenType.идентификатор, identifier, start + 1, position));
                 continue;
             }
 
@@ -89,15 +106,23 @@ public static class LexicalAnalyzer
 
                 string number = input.Substring(start, position - start);
 
-                if (hasDecimalPoint)
+                if (number == ".")
                 {
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.FloatingPointLiteral, number, start + 1, position));
+                    tokens.Add(new Token(TokenType.некорректный_токен, number, start + 1, position));
                 }
                 else
                 {
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.IntegerLiteral, number, start + 1, position));
-                }
 
+                    if (hasDecimalPoint)
+                    {
+                        tokens.Add(new Token(TokenType.число_с_плавающей_точкой, number, start + 1, position));
+                    }
+                    else
+                    {
+                        tokens.Add(new Token(TokenType.целое_число, number, start + 1, position));
+                    }
+
+                }
                 continue;
             }
 
@@ -108,12 +133,12 @@ public static class LexicalAnalyzer
                     if (position < input.Length - 1 && input[position + 1] == '=')
                     {
                         // Оператор !=
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "!=", position + 1, position + 2));
+                        tokens.Add(new Token(TokenType.оператор_сравнения, "!=", position + 1, position + 2));
                         position += 2;
                     }
                     else
                     {   // Оператор !
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Not, "!", position + 1, position + 1));
+                        tokens.Add(new Token(TokenType.оператор_отрицания, "!", position + 1, position + 1));
                         position++;
                     }
                     break;
@@ -121,38 +146,48 @@ public static class LexicalAnalyzer
                 case '&':
                     if (position < input.Length - 1 && input[position + 1] == '&')
                     {
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LogicalOp, "&&", position + 1, position + 2));
+                        tokens.Add(new Token(TokenType.логический_оператор, "&&", position + 1, position + 2));
                         position += 2;
                     }
                     else
                     {
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, currentChar.ToString(), position + 1, position + 1));
-                        position++;
+                        int _start = position;
+                        while (position < input.Length && !char.IsWhiteSpace(input[position]) && !IsLetter(input[position]) && !IsDigit(input[position]))
+                        {
+                            position++;
+                        }
+                        string _invalidToken = input.Substring(_start, position - _start);
+                        tokens.Add(new Token(TokenType.некорректный_токен, _invalidToken, _start + 1, position));
                     }
                     break;
 
                 case '|':
                     if (position < input.Length - 1 && input[position + 1] == '|')
                     {
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LogicalOp, "||", position + 1, position + 2));
+                        tokens.Add(new Token(TokenType.логический_оператор, "||", position + 1, position + 2));
                         position += 2;
                     }
                     else
                     {
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, currentChar.ToString(), position + 1, position + 1));
-                        position++;
+                        int _start = position;
+                        while (position < input.Length && !char.IsWhiteSpace(input[position]) && !IsLetter(input[position]) && !IsDigit(input[position]))
+                        {
+                            position++;
+                        }
+                        string _invalidToken = input.Substring(_start, position - _start);
+                        tokens.Add(new Token(TokenType.некорректный_токен, _invalidToken, _start + 1, position));
                     }
                     break;
 
                 case '<':
                     // Оператор <
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "<", position + 1, position + 1));
+                    tokens.Add(new Token(TokenType.оператор_сравнения, "<", position + 1, position + 1));
                     position++;
                     break;
 
                 case '>':
                     // Оператор >
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, ">", position + 1, position + 1));
+                    tokens.Add(new Token(TokenType.оператор_сравнения, ">", position + 1, position + 1));
                     position++;
                     break;
 
@@ -160,56 +195,66 @@ public static class LexicalAnalyzer
                     if (position < input.Length - 1 && input[position + 1] == '=')
                     {
                         // Оператор ==
-                        tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RelationalOp, "==", position + 1, position + 2));
+                        tokens.Add(new Token(TokenType.оператор_сравнения, "==", position + 1, position + 2));
                         position += 2;
                     }
                     else
                     {   //Некорректный символ
-                        tokens.Add(Tuple.Create(TokenType.Invalid, "=", position + 1, position + 1));
-                        position++;
+                        int _start = position;
+                        while (position < input.Length && !char.IsWhiteSpace(input[position]) && !IsLetter(input[position]) && !IsDigit(input[position]))
+                        {
+                            position++;
+                        }
+                        string _invalidToken = input.Substring(_start, position - _start);
+                        tokens.Add(new Token(TokenType.некорректный_токен, _invalidToken, _start + 1, position));
                     }
                     break;
 
                 case '+':
                     // Оператор +
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.AdditiveOp, "+", position + 1, position + 1));
+                    tokens.Add(new Token(TokenType.оператор_сложения_вычитания, "+", position + 1, position + 1));
                     position++;
                     break;
 
                 case '-':
                     // Оператор -
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.AdditiveOp, "-", position + 1, position + 1));
+                    tokens.Add(new Token(TokenType.оператор_сложения_вычитания, "-", position + 1, position + 1));
                     position++;
                     break;
 
                 case '*':
                     // Оператор *
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.MultiplicativeOp, "*", position + 1, position + 1));
+                    tokens.Add(new Token(TokenType.оператор_умножения_деления, "*", position + 1, position + 1));
                     position++;
                     break;
 
                 case '/':
                     // Оператор /
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.MultiplicativeOp, "/", position + 1, position + 1));
+                    tokens.Add(new Token(TokenType.оператор_умножения_деления, "/", position + 1, position + 1));
                     position++;
                     break;
 
                 case '(':
                     // Открывающая скобка
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.LeftParen, "(", position + 1, position + 1));
+                    tokens.Add(new Token(TokenType.открывающая_скобка, "(", position + 1, position + 1));
                     position++;
                     break;
 
                 case ')':
                     // Закрывающая скобка
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.RightParen, ")", position + 1, position + 1));
+                    tokens.Add(new Token(TokenType.закрывающая_скобка, ")", position + 1, position + 1));
                     position++;
                     break;
 
                 default:
                     // Некорректный символ
-                    tokens.Add(new Tuple<TokenType, string, int, int>(TokenType.Invalid, input[position].ToString(), position + 1, position + 1));
-                    position++;
+                    int start = position;
+                    while (position < input.Length && !char.IsWhiteSpace(input[position]) && !IsLetter(input[position]) && !IsDigit(input[position]))
+                    {
+                        position++;
+                    }
+                    string invalidToken = input.Substring(start, position - start);
+                    tokens.Add(new Token(TokenType.некорректный_токен, invalidToken, start + 1, position));
                     break;
             }
         }

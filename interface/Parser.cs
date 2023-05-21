@@ -3,44 +3,60 @@ using System.Collections.Generic;
 
 namespace @interface
 {
+    //действия над токенами
+    public enum ActionOverTokens
+    {
+        InsertBefore, 
+        InsertAfter,
+        Replacement,
+        Remove
+    }
+
+    //класс для ошибок
+    public class ParsingError
+    {
+        public int Position { get; }
+        public TokenType ExpectedTokenType { get; }
+        public ActionOverTokens action { get; }
+        public string Message { get; }
+
+        public ParsingError(int position, TokenType expectedTokenType, ActionOverTokens _action ,string message)
+        {
+            Position = position;
+            ExpectedTokenType = expectedTokenType;
+            action= _action;
+            Message = message;
+        }
+    }
+
     static class Parser
     {
         //Список лексем
-        private static List<Tuple<TokenType, string, int, int>> tokens;
-        //Позиция текущей лексемы
+        private static List<Token> tokens;
+        //Tекущая лексема
         private static int currentTokenIndex;
-        private static bool isBoolIndetifier;
 
         //Ошибки
-        private static List<string> errors;
-        public static List<string> getErrors() { return errors; }
+        private static List<ParsingError> errors;
+        public static List<ParsingError> getErrors() { return errors; }
         public static void clearErrorsList() { errors.Clear(); }
 
-        //метод для обработки ошибок
-        private static void Error(string message)
-        {
-            if (currentTokenIndex >= tokens.Count) 
-            {
-                errors.Add($"Ошибка в позиции {tokens[tokens.Count - 1].Item4}: {message}");
-                throw new Exception($"Ошибка в позиции {tokens[tokens.Count - 1].Item4}: {message}");
-            }
-            else
-            {
-                errors.Add($"Ошибка в позиции {tokens[currentTokenIndex].Item3}: {message}");
-                throw new Exception($"Ошибка в позиции {tokens[currentTokenIndex].Item3}: {message}");
-            }
-            
-        }
 
         //метод для проверки текущей лексемы и перехода к следующей
         private static void Match(TokenType expectedToken)
         {
             if (currentTokenIndex < tokens.Count)
             {
-                if (tokens[currentTokenIndex].Item1 == expectedToken)
+                if (tokens[currentTokenIndex].tokenType == expectedToken)
                     currentTokenIndex++;
                 else
-                    Error($"Ожидалась лексема {expectedToken}, получена {tokens[currentTokenIndex].Item1}");
+                {
+                    if (!Check(TokenType.некорректный_токен) && !Check(TokenType.закрывающая_скобка))
+                        errors.Add(new ParsingError(tokens[currentTokenIndex].start - 1, expectedToken, ActionOverTokens.InsertBefore, $"Ожидалась лексема {expectedToken}, получена {tokens[currentTokenIndex].tokenType}"));
+                    else
+                        errors.Add(new ParsingError(tokens[currentTokenIndex].start, expectedToken, ActionOverTokens.Replacement, $"Ожидалась лексема {expectedToken}, получена {tokens[currentTokenIndex].tokenType}"));
+                    throw new Exception($"Ожидалась лексема {expectedToken}, получена {tokens[currentTokenIndex].tokenType}");
+                }
             }
         }
 
@@ -49,25 +65,101 @@ namespace @interface
         {
             if (currentTokenIndex == tokens.Count)
                 return false;
-            return tokens[currentTokenIndex].Item1 == expectedToken;
+            return tokens[currentTokenIndex].tokenType == expectedToken;
         }
 
-        //метод анализа строки
-        public static void Parse(List<Tuple<TokenType, string, int, int>> inputTokens)
+        //метод для проверки, является ли лексема литералом.
+        private static bool isLiteral(int i)
+        {
+            return (tokens[currentTokenIndex + i].tokenType == TokenType.идентификатор || tokens[currentTokenIndex + i].tokenType == TokenType.открывающая_скобка ||
+                                tokens[currentTokenIndex + i].tokenType == TokenType.логическая_константа || tokens[currentTokenIndex + i].tokenType == TokenType.целое_число ||
+                                tokens[currentTokenIndex + i].tokenType == TokenType.число_с_плавающей_точкой);
+        }
+
+        //метод для запуска проверки
+        public static void Parsing(List<Token> inputTokens)
         {
             tokens = inputTokens;
             currentTokenIndex = 0;
-            errors = new List<string>();
+            errors = new List<ParsingError>();
+            Parse();
+        }
 
+
+        //метод анализа строки
+        public static void Parse()
+        {
             try
             {
                 Expr();
                 if (currentTokenIndex != tokens.Count)
-                    Error("Некорректное выражение");
+                {
+                    string message = "Некорректный токен";
+                    if (currentTokenIndex == tokens.Count- 1)
+                    {
+                        errors.Add(new ParsingError(tokens[currentTokenIndex].start, TokenType.некорректный_токен, ActionOverTokens.Remove, message));
+                        throw new Exception(message);
+                    }
+                    else
+                    {
+                        if (isLiteral(0))
+                        {
+                            message = "Ожидался оператор сравнения";
+                            errors.Add(new ParsingError(tokens[currentTokenIndex].start - 1, TokenType.оператор_сравнения, ActionOverTokens.InsertBefore, message));
+                            throw new Exception(message);
+                        }
+                        else if(isLiteral(1))
+                        {
+                            message = "Ожидался оператор сравнения";
+                            if (!Check(TokenType.некорректный_токен) && !Check(TokenType.закрывающая_скобка))
+                                errors.Add(new ParsingError(tokens[currentTokenIndex].start - 1, TokenType.оператор_сравнения, ActionOverTokens.InsertBefore, message));
+                            else
+                                errors.Add(new ParsingError(tokens[currentTokenIndex].start, TokenType.оператор_сравнения, ActionOverTokens.Replacement, message));
+                            throw new Exception(message);
+                        }
+                        else
+                        {
+                            errors.Add(new ParsingError(tokens[currentTokenIndex].start, TokenType.некорректный_токен, ActionOverTokens.Remove, message));
+                            throw new Exception(message);
+                        }    
+                    }
+                }
             }
-            catch
+            catch //Нейтрализация ошибки
             {
-                return;
+                var token = new Token(errors[errors.Count - 1].ExpectedTokenType, " ", errors[errors.Count - 1].Position, errors[errors.Count - 1].Position);
+                if (tokens.Count > 1)
+                {
+                    if(currentTokenIndex < tokens.Count)
+                    {
+                        switch (errors[errors.Count - 1].action)
+                        {
+                            case ActionOverTokens.InsertBefore:
+                                tokens.Insert(currentTokenIndex, token);
+                                break;
+                            case ActionOverTokens.InsertAfter:
+                                tokens.Insert(currentTokenIndex + 1, token);
+                                break;
+                            case ActionOverTokens.Replacement:
+                                tokens.RemoveAt(currentTokenIndex);
+                                tokens.Insert(currentTokenIndex, token);
+                                break;
+                            case ActionOverTokens.Remove:
+                                tokens.RemoveAt(currentTokenIndex);
+                                break;
+
+                        }
+                    }
+                    else
+                        tokens.Add(token);
+                    currentTokenIndex = 0;
+                    Parse();
+                }
+                else
+                {
+                    tokens.Remove(token);
+                    return;
+                }
             }
         }
 
@@ -75,9 +167,9 @@ namespace @interface
         private static void Expr()
         {
             AndExpr();
-            while ((currentTokenIndex < tokens.Count) && Check(TokenType.LogicalOp) && tokens[currentTokenIndex].Item2 == "||")
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.логический_оператор) && tokens[currentTokenIndex].token == "||")
             {
-                Match(TokenType.LogicalOp);
+                Match(TokenType.логический_оператор);
                 AndExpr();
             }
         }
@@ -86,9 +178,9 @@ namespace @interface
         private static void AndExpr()
         {
             NotExpr();
-            while ((currentTokenIndex < tokens.Count) && Check(TokenType.LogicalOp) && tokens[currentTokenIndex].Item2 == "&&")
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.логический_оператор) && tokens[currentTokenIndex].token == "&&")
             {
-                Match(TokenType.LogicalOp);
+                Match(TokenType.логический_оператор);
                 NotExpr();
             }
         }
@@ -96,130 +188,106 @@ namespace @interface
         //‹NotExpr› → !‹SimpleExpr› | ‹SimpleExpr›
         private static void NotExpr()
         {
-            if (Check(TokenType.Not))
-            {
-                isBoolIndetifier = true;
-                Match(TokenType.Not);
-            }
-            SimpleExpr();
-        }
-        //метод для определения, нужно ли переходить к ComparisonExpr
-        private static bool isComparisonExpr()
-        {
-            if (!isBoolIndetifier && currentTokenIndex < tokens.Count && (Check(TokenType.RelationalOp) || Check(TokenType.AdditiveOp) || Check(TokenType.MultiplicativeOp)))
-            {
-                currentTokenIndex--;
-                ComparisonExpr();
-                return true;
-            }
-            return false;
-        }
-        //‹SimpleExpr› → ‹Identifier› | ‹BooleanLiteral› | (‹Expr›) | ‹ComparisonExpr›
-        private static void SimpleExpr()
-        {
-            if (currentTokenIndex < tokens.Count)
-            {
-                switch (tokens[currentTokenIndex].Item1)
-                {
-                    case TokenType.Identifier:
-                        Match(TokenType.Identifier);
-                        isComparisonExpr();
-                        isBoolIndetifier = false;
-                        break;
-                    case TokenType.IntegerLiteral:
-                        Match(TokenType.IntegerLiteral);
-                        if (!isComparisonExpr())
-                            Error("Ожидался идентификатор, логическая константа, число или открывающая скобка");
-                        break;
-                    case TokenType.FloatingPointLiteral:
-                        Match(TokenType.FloatingPointLiteral);
-                        if(!isComparisonExpr())
-                            Error("Ожидался идентификатор, логическая константа, число или открывающая скобка");
-                        break;
-                    case TokenType.BooleanLiteral:
-                        Match(TokenType.BooleanLiteral);
-                        break;
-                    case TokenType.LeftParen:
-                        Match(TokenType.LeftParen);
-                        isBoolIndetifier = false;
-                        Expr();
-                        if (currentTokenIndex < tokens.Count)
-                        {
-                            if (Check(TokenType.RightParen))
-                                Match(TokenType.RightParen);
-                            else
-                                Error("Отсутсвует закрывающая скобка.");
-                        }
-                        else
-                            Error("Отсутсвует закрывающая скобка.");
-                        break;
-                    default:
-                        Error("Ожидался идентификатор, логическая константа, число или открывающая скобка");
-                        break;
-                }
-            }
-            else
-                Error("Некорректное выражение");
+            if (Check(TokenType.оператор_отрицания))
+                Match(TokenType.оператор_отрицания);
+            ComparisonExpr();
         }
 
-        //‹ComparisonExpr› → ‹ArithmeticExpr› ‹RelationalOp› ‹ArithmeticExpr›
+        //‹ComparisonExpr› → ‹SimpleExpr› {‹оператор_сравнения› ‹SimpleExpr›}
         private static void ComparisonExpr()
         {
-            ArithmeticExpr();
-            Match(TokenType.RelationalOp);
-            ArithmeticExpr();
+            SimpleExpr();
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.оператор_сравнения))
+            {
+                Match(TokenType.оператор_сравнения);
+                SimpleExpr();
+            }
         }
 
-        //‹ArithmeticExpr› → ‹Term› {‹AdditiveOp›‹Term›}
-        private static void ArithmeticExpr()
+        //‹SimpleExpr› → ‹Term› {‹оператор_сложения_вычитания›‹Term›}
+        private static void SimpleExpr()
         {
             Term();
-            while ((currentTokenIndex < tokens.Count) && Check(TokenType.AdditiveOp))
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.оператор_сложения_вычитания))
             {
-                Match(TokenType.AdditiveOp);
+                Match(TokenType.оператор_сложения_вычитания);
                 Term();
             }
         }
 
-        //‹Term› → ‹Factor› {‹MultiplicativeOp›‹Factor›}
+        //‹Term› → ‹Factor› {‹оператор_умножения_деления›‹Factor›}
         private static void Term()
         {
             Factor();
-            while ((currentTokenIndex < tokens.Count) && Check(TokenType.MultiplicativeOp))
+            while ((currentTokenIndex < tokens.Count) && Check(TokenType.оператор_умножения_деления))
             {
-                Match(TokenType.MultiplicativeOp);
+                Match(TokenType.оператор_умножения_деления);
                 Factor();
             }
         }
 
-        //‹Factor› → (‹ArithmeticExpr›) | ‹Identifier› | ‹IntegerLiteral› | ‹FloatingPointLiteral›
+        //‹Factor› → (‹Expr›) | ‹идентификатор› | ‹целое_число› | ‹число_с_плавающей_точкой› | ‹логическая_константа›
         private static void Factor()
         {
             if (currentTokenIndex < tokens.Count)
             {
-                switch (tokens[currentTokenIndex].Item1)
+                switch (tokens[currentTokenIndex].tokenType)
                 {
-                    case TokenType.LeftParen:
-                        Match(TokenType.LeftParen);
-                        ArithmeticExpr();
-                        Match(TokenType.RightParen);
+                    case TokenType.открывающая_скобка:
+                        Match(TokenType.открывающая_скобка);
+                        Expr();
+                        if (!Check(TokenType.закрывающая_скобка))
+                        {
+                            if (currentTokenIndex < tokens.Count)
+                            {
+                                if (isLiteral(0))
+                                {
+                                    errors.Add(new ParsingError(tokens[currentTokenIndex].start - 1, TokenType.оператор_сравнения, ActionOverTokens.InsertBefore, "Ожидался оператор сравнения"));
+                                    throw new Exception("Ожидался оператор сравнения");
+                                }
+                                else if (!Check(TokenType.некорректный_токен) && !Check(TokenType.оператор_отрицания))
+                                {
+                                    errors.Add(new ParsingError(tokens[currentTokenIndex].end + 1, TokenType.закрывающая_скобка, ActionOverTokens.InsertAfter, "Ожидалась закрывающая скобка"));
+                                    throw new Exception("Ожидалась закрывающая скобка");
+                                }
+                            }
+                            else
+                            {
+                                errors.Add(new ParsingError(tokens[tokens.Count - 1].end + 1, TokenType.закрывающая_скобка, ActionOverTokens.InsertAfter, "Ожидалась закрывающая скобка"));
+                                throw new Exception("Ожидалась закрывающая скобка");
+                            }
+                        }
+                        else
+                            Match(TokenType.закрывающая_скобка);
                         break;
-                    case TokenType.IntegerLiteral:
-                        Match(TokenType.IntegerLiteral);
+                    case TokenType.идентификатор:
+                        Match(TokenType.идентификатор);
                         break;
-                    case TokenType.FloatingPointLiteral:
-                        Match(TokenType.FloatingPointLiteral);
+                    case TokenType.целое_число:
+                        Match(TokenType.целое_число);
                         break;
-                    case TokenType.Identifier:
-                        Match(TokenType.Identifier);
+                    case TokenType.число_с_плавающей_точкой:
+                        Match(TokenType.число_с_плавающей_точкой);
+                        break;
+                    case TokenType.логическая_константа:
+                        Match(TokenType.логическая_константа);
                         break;
                     default:
-                        Error("Ожидался идентификатор, число или открывающая скобка");
+                        Match(TokenType.идентификатор);
                         break;
                 }
             }
             else
-                Error("Некорректное выражение");
+            {
+                if (tokens.Count > 1) 
+                    errors.Add(new ParsingError(tokens[currentTokenIndex - 1].end + 1, TokenType.идентификатор, ActionOverTokens.InsertAfter, "Некорректный токен"));
+                else
+                {
+                    errors.Add(new ParsingError(tokens[currentTokenIndex - 1].end, TokenType.некорректный_токен, ActionOverTokens.Remove, "Некорректный токен"));
+                    throw new Exception("Некорректный токен");
+                }
+
+            }
         }
     }
 }
