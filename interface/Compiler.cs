@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection.Emit;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -15,6 +16,8 @@ namespace @interface
 {
     public partial class Compiler : Form
     {
+        private int maxFontSize = 19;
+        private int minFontSize = 6;
         public Compiler()
         {
             InitializeComponent();
@@ -35,10 +38,25 @@ namespace @interface
 
         }
 
+
         private void Launch()
         {
             richTextBoxOutput.Clear();
-            richTextBoxOutput.Text = LexicalAnalyzer.RunScanner(richTextBoxInput.Text);
+            if (richTextBoxInput.Text != string.Empty)
+            {
+                int i;
+                List<FiniteStateMachine> finiteStateMachines= new List<FiniteStateMachine>();
+                string[] commands = richTextBoxInput.Text.Split('\n');
+                for (i = 0; i < commands.Length; i++)
+                {
+                    finiteStateMachines.Add(new FiniteStateMachine());
+                    List<Token> tokens = LexicalAnalyzer.Tokenize(commands[i]);
+                    finiteStateMachines[i].start(tokens);
+                    if (tokens.Count == 0 || tokens == null)
+                        continue;
+                    richTextBoxOutput.Text += $"Выражение {commands[i]}:\n{finiteStateMachines[i].result}\n";
+                }
+            }
         }
 
         //хоткеи
@@ -74,7 +92,7 @@ namespace @interface
         {
             if (e.Control && e.KeyCode == Keys.F1)//Ctrl+F1
             {
-                showHelp();
+                openDocument("\\html-documents\\Справка.html");
             }
         }
         private void hotkeyLaunch(object sender, KeyEventArgs e)
@@ -98,20 +116,27 @@ namespace @interface
                 File.WriteAllText(saveFileDialog1.FileName, richTextBoxInput.Text);
             else
                 saveAs();
-            richTextBoxInput.Modified = false;
+            richTextBoxOutput.Clear();
         }
 
         private void saveAs()
         {
             string file;
-            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+            DialogResult result = saveFileDialog1.ShowDialog();
+            if (result == DialogResult.OK)
             {
                 string filename = saveFileDialog1.FileName;
                 richTextBoxInput.SaveFile(filename, RichTextBoxStreamType.PlainText);
                 file = Path.GetFileName(filename);
+                richTextBoxInput.Modified = false;
                 MessageBox.Show("Файл " + file + " успешно сохранен.", "Сохранение успешно!", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            richTextBoxInput.Modified = false;
+            else if (result == DialogResult.Cancel)
+            {
+                richTextBoxInput.Modified = true;
+            }
+            richTextBoxOutput.Clear();
+
         }
 
         private void savingResult()
@@ -127,14 +152,12 @@ namespace @interface
                     saveFileDialog1.FileName = string.Empty;
                     richTextBoxInput.ResetText();
                     richTextBoxInput.Focus();
-                    richTextBoxInput.Modified = false;
                 }
                 else
                 {
                     saveFileDialog1.FileName = string.Empty;
                     richTextBoxInput.ResetText();
                     richTextBoxInput.Focus();
-                    richTextBoxInput.Modified = false;
                 }
             }
             else
@@ -143,6 +166,8 @@ namespace @interface
                 richTextBoxInput.ResetText();
                 richTextBoxInput.Focus();
             }
+            richTextBoxInput.Modified = false;
+            richTextBoxOutput.Clear();
         }
 
         //открытие
@@ -155,6 +180,7 @@ namespace @interface
                 saveFileDialog1.FileName = openFileDialog1.FileName;
                 richTextBoxInput.Modified = false;
             }
+            richTextBoxOutput.Clear();
         }
 
         private void создатьToolStripMenuItem_Click(object sender, EventArgs e)
@@ -186,11 +212,13 @@ namespace @interface
         private void отменитьToolStripMenuItem_Click(object sender, EventArgs e)
         {
             richTextBoxInput.Undo();
+            richTextBoxLineNumber.Undo();
         }
 
         private void вернутьToolStripMenuItem_Click(object sender, EventArgs e)
         {
             richTextBoxInput.Redo();
+            richTextBoxLineNumber.Undo();
         }
 
         private void вырезатьToolStripMenuItem_Click(object sender, EventArgs e)
@@ -236,11 +264,13 @@ namespace @interface
         private void cancelToolStripButton_Click(object sender, EventArgs e)
         {
             richTextBoxInput.Undo();
+            richTextBoxLineNumber.Undo();
         }
 
         private void returnToolStripButton_Click(object sender, EventArgs e)
         {
             richTextBoxInput.Redo();
+            richTextBoxLineNumber.Undo();
         }
 
         private void copyToolStripButton_Click(object sender, EventArgs e)
@@ -260,7 +290,7 @@ namespace @interface
 
         private void вызовСправкиToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            showHelp();
+            openDocument("\\html-documents\\Справка.html");
         }
 
         private void пускToolStripMenuItem_Click(object sender, EventArgs e)
@@ -286,84 +316,9 @@ namespace @interface
             }
         }
 
-        //Подсветка синтаксиса
-        private void HighlightSyntax(RichTextBox richTextBox)
-        {
-            // Определение цветов
-            Color keywordColor = Color.Purple;
-            Color stringColor = Color.Red;
-            Color commentColor = Color.Green;
-            Color typeOfDataColor = Color.DarkBlue;
-
-            // Определение регулярных выражений для ключевых слов, строк и комментариев
-            string keywordPattern = @"\b(if|else|for|while|switch)\b";
-            string typeOfDataPattern = @"\b(int|float|long|short|double|string|char|bool|true|false)\b";
-            string stringPattern = @"""(\\.|[^""\\])*""";
-            string commentPattern = @"//.*?$|/\*.*?\*/";
-
-            // Создание объекта регулярного выражения
-            Regex keywordRegex = new Regex(keywordPattern);
-            Regex typeOfDataRegex = new Regex(typeOfDataPattern);
-            Regex stringRegex = new Regex(stringPattern);
-            Regex commentRegex = new Regex(commentPattern, RegexOptions.Multiline);
-
-            // Сохранение текущей позиции курсора
-            int originalSelectionStart = richTextBox.SelectionStart;
-            int originalSelectionLength = richTextBox.SelectionLength;
-
-            // Сохранение текущего цвета выделенного текста
-            Color selectionColor = richTextBox.ForeColor;
-
-            // Отключение перерисовки RichTextBox
-            richTextBox.SuspendLayout();
-
-            // Итерация по всем строкам текста
-            for (int i = 0; i < richTextBox.Lines.Length; i++)
-            {
-                string line = richTextBox.Lines[i];
-
-                // Поиск ключевых слов
-                foreach (Match keywordMatch in keywordRegex.Matches(line))
-                {
-                    richTextBox.Select(keywordMatch.Index + richTextBox.GetFirstCharIndexFromLine(i), keywordMatch.Length);
-                    richTextBox.SelectionColor = keywordColor;
-                }
-
-                foreach (Match typeOfDataMatch in typeOfDataRegex.Matches(line))
-                {
-                    richTextBox.Select(typeOfDataMatch.Index + richTextBox.GetFirstCharIndexFromLine(i), typeOfDataMatch.Length);
-                    richTextBox.SelectionColor = typeOfDataColor;
-                }
-
-                // Поиск строк
-                foreach (Match stringMatch in stringRegex.Matches(line))
-                {
-                    richTextBox.Select(stringMatch.Index + richTextBox.GetFirstCharIndexFromLine(i), stringMatch.Length);
-                    richTextBox.SelectionColor = stringColor;
-                }
-
-                // Поиск комментариев
-                foreach (Match commentMatch in commentRegex.Matches(line))
-                {
-                    richTextBox.Select(commentMatch.Index + richTextBox.GetFirstCharIndexFromLine(i), commentMatch.Length);
-                    richTextBox.SelectionColor = commentColor;
-                }
-            }
-
-            // Восстановление выделения текста и позиции курсора
-            richTextBox.Select(originalSelectionStart, originalSelectionLength);
-
-            // Восстановление цвета выделенного текста
-            richTextBox.SelectionColor = selectionColor;
-
-            // Включение перерисовки RichTextBox
-            richTextBox.ResumeLayout();
-        }
-
         private void richTextBox1_TextChanged(object sender, EventArgs e)
         {
             UpdateLineNumbers();
-            HighlightSyntax(richTextBoxInput);
         }
 
         private void richTextBox1_VScroll(object sender, EventArgs e)
@@ -371,62 +326,109 @@ namespace @interface
             UpdateLineNumbers();
         }
 
-        private void splitContainer_Panel1_Resize(object sender, EventArgs e)
+        private void openDocument(string pathAfterCurrentDirectory)
         {
-
-        }
-
-        private void лаб3ToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            Help.ShowHelp(this, "https://github.com/XETR1K/interface");
+            try
+            {
+                string path = Environment.CurrentDirectory + pathAfterCurrentDirectory;
+                System.Diagnostics.Process.Start(path);
+            }
+            catch { MessageBox.Show("Не найден соответствующий документ!", Name = "Открытие документа"); }
         }
 
         private void постановкаЗадачиToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string path = Environment.CurrentDirectory + "\\html-documents\\Постановка задачи.html";
-            System.Diagnostics.Process.Start(path);
+            openDocument("\\html-documents\\Постановка задачи.html");
         }
 
         private void грамматикаToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string path = Environment.CurrentDirectory + "\\html-documents\\Разработка грамматики.html";
-            System.Diagnostics.Process.Start(path);
+            openDocument("\\html-documents\\Разработка грамматики.html");
         }
 
         private void классификацияГрамматикиToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string path = Environment.CurrentDirectory + "\\html-documents\\Классификация грамматики.html";
-            System.Diagnostics.Process.Start(path);
+            openDocument("\\html-documents\\Классификация грамматики.html");
         }
 
         private void методАнализаToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string path = Environment.CurrentDirectory + "\\html-documents\\Метод анализа.html";
-            System.Diagnostics.Process.Start(path);
+            openDocument("\\html-documents\\Метод анализа.html");
         }
 
         private void диагностикаИНейтрализацияОшибкиToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string path = Environment.CurrentDirectory + "\\html-documents\\Диагностика и нейтрализация синтаксических ошибок.html";
-            System.Diagnostics.Process.Start(path);
+            openDocument("\\html-documents\\Диагностика и нейтрализация синтаксических ошибок.html");
         }
 
         private void тестовыйПримерToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string path = Environment.CurrentDirectory + "\\html-documents\\Тестовый пример.html";
-            System.Diagnostics.Process.Start(path);
+            openDocument("\\html-documents\\Тестовый пример.html");
         }
 
         private void списокЛитературыToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string path = Environment.CurrentDirectory + "\\html-documents\\Список литературы.html";
-            System.Diagnostics.Process.Start(path);
+            openDocument("\\html-documents\\Список литературы.html");
         }
 
         private void исходныйКодПрограммыToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string path = Environment.CurrentDirectory + "\\html-documents\\Исходный код программы.html";
-            System.Diagnostics.Process.Start(path);
+            openDocument("\\html-documents\\Исходный код программы.html");
+        }
+
+        private void увеличитьШрифтToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (richTextBoxInput.Font.Size > maxFontSize)
+                return;
+            richTextBoxInput.Font = new Font(richTextBoxInput.Font.FontFamily, richTextBoxInput.Font.Size + 2);
+            richTextBoxLineNumber.Font = new Font(richTextBoxLineNumber.Font.FontFamily, richTextBoxLineNumber.Font.Size + 2);
+        }
+
+        private void уменьшитьШрифтToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (richTextBoxInput.Font.Size < minFontSize)
+                return;
+            richTextBoxInput.Font = new Font(richTextBoxInput.Font.FontFamily, richTextBoxInput.Font.Size - 2);
+            richTextBoxLineNumber.Font = new Font(richTextBoxLineNumber.Font.FontFamily, richTextBoxLineNumber.Font.Size - 2);
+        }
+
+        private void увеличитьШрифтToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            if (richTextBoxOutput.Font.Size > maxFontSize)
+                return;
+            richTextBoxOutput.Font = new Font(richTextBoxOutput.Font.FontFamily, richTextBoxOutput.Font.Size + 2);
+        }
+
+        private void уменьшитьШрифтToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            if (richTextBoxOutput.Font.Size < minFontSize)
+                return;
+            richTextBoxOutput.Font = new Font(richTextBoxOutput.Font.FontFamily, richTextBoxOutput.Font.Size - 2);
+        }
+
+        private void оПрограммеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            openDocument("\\html-documents\\О программе.html");
+        }
+
+        private void MagnifierButton_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                if (richTextBoxInput.Font.Size > maxFontSize)
+                    return;
+                richTextBoxInput.Font = new Font(richTextBoxInput.Font.FontFamily, richTextBoxInput.Font.Size + 2);
+                richTextBoxLineNumber.Font = new Font(richTextBoxLineNumber.Font.FontFamily, richTextBoxLineNumber.Font.Size + 2);
+                richTextBoxOutput.Font = new Font(richTextBoxOutput.Font.FontFamily, richTextBoxOutput.Font.Size + 2);
+            }
+            else if (e.Button == MouseButtons.Right)
+            {
+                if (richTextBoxInput.Font.Size < minFontSize)
+                    return;
+                richTextBoxInput.Font = new Font(richTextBoxInput.Font.FontFamily, richTextBoxInput.Font.Size - 2);
+                richTextBoxLineNumber.Font = new Font(richTextBoxLineNumber.Font.FontFamily, richTextBoxLineNumber.Font.Size - 2);
+                richTextBoxOutput.Font = new Font(richTextBoxOutput.Font.FontFamily, richTextBoxOutput.Font.Size - 2);
+            }
         }
     }
 }

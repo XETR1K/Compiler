@@ -64,11 +64,11 @@
     <Compile Include="Compiler.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Compiler.Designer.cs">
+    <Compile Include="Compiler.designer.cs">
       <DependentUpon>Compiler.cs</DependentUpon>
     </Compile>
     <Compile Include="LexicalAnalyzer.cs" />
-    <Compile Include="Parser.cs" />
+    <Compile Include="FiniteStateMachine.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Compiler.resx">
