@@ -44,18 +44,25 @@ namespace @interface
             richTextBoxOutput.Clear();
             if (richTextBoxInput.Text != string.Empty)
             {
-                int i;
-                List<FiniteStateMachine> finiteStateMachines= new List<FiniteStateMachine>();
-                string[] commands = richTextBoxInput.Text.Split('\n');
-                for (i = 0; i < commands.Length; i++)
-                {
-                    finiteStateMachines.Add(new FiniteStateMachine());
-                    List<Token> tokens = LexicalAnalyzer.Tokenize(commands[i]);
-                    finiteStateMachines[i].start(tokens);
-                    if (tokens.Count == 0 || tokens == null)
-                        continue;
-                    richTextBoxOutput.Text += $"Выражение {commands[i]}:\n{finiteStateMachines[i].result}\n";
-                }
+                List<MatchResult> matchCollections = new List<MatchResult>();
+                RegexMatcher r = new RegexMatcher(@"\b((?:https?|ftp)://[^\s/$.?#].[^\s]*)\b");
+                RegexMatcher r1 = new RegexMatcher("a*bcc*");
+                ManualMatcher r2 = new ManualMatcher();
+                matchCollections = r.FindMatches(richTextBoxInput.Text);
+
+                richTextBoxOutput.Text = "РВ, описывающее ссылку на веб-страницу:\n";
+                foreach (MatchResult match in matchCollections) 
+                    richTextBoxOutput.Text += $"{match.Substring}: c {match.StartIndex} символа\n";
+                matchCollections = r1.FindMatches(richTextBoxInput.Text);
+
+                richTextBoxOutput.Text += "РВ a*bcc*:\n";
+                foreach (MatchResult match in matchCollections)
+                    richTextBoxOutput.Text += $"{match.Substring}: c {match.StartIndex} символа\n";
+                matchCollections = r2.FindMatches(richTextBoxInput.Text);
+
+                richTextBoxOutput.Text += "РВ 0*122*0:\n";
+                foreach (MatchResult match in matchCollections)
+                    richTextBoxOutput.Text += $"{match.Substring}: c {match.StartIndex} символа\n";
             }
         }
 
